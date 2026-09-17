@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課程管理</title>
+    <style>
+        :root {
+            --bg-color: #F5F5F7;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --card-hover-bg: #FFFFFF;
+            --text-color: #1D1D1F;
+            --text-secondary: #86868B;
+            --fab-bg: #FFFFFF;
+            --fab-border: rgba(0, 0, 0, 0.15);
+            --btn-green: #34C759;
+            --btn-green-hover: #30B753;
+            --input-bg: #F2F2F7;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+            --modal-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            --radius-main: 20px;
+            --radius-modal: 16px;
+            --radius-input: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 40px 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 840px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .header {
+            padding: 0 8px;
+        }
+
+        .header h1 {
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-color);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .card {
+            display: block;
+            aspect-ratio: 1.25 / 1;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-main);
+            box-shadow: var(--shadow-sm);
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            cursor: pointer;
+        }
+
+        .card:hover {
+            background: var(--card-hover-bg);
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: var(--shadow-md);
+            border-color: rgba(0, 0, 0, 0.12);
+        }
+
+        .card:active {
+            transform: translateY(-1px) scale(0.99);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* FAB 按鈕 */
+        .fab {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--fab-bg);
+            border: 1px solid var(--fab-border);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+            outline: none;
+            z-index: 10;
+        }
+
+        .fab-icon {
+            width: 20px;
+            height: 20px;
+            position: relative;
+        }
+
+        .fab-icon::before,
+        .fab-icon::after {
+            content: '';
+            position: absolute;
+            background-color: #333333;
+            border-radius: 2px;
+        }
+
+        .fab-icon::before {
+            top: 9px;
+            left: 0;
+            width: 20px;
+            height: 2px;
+        }
+
+        .fab-icon::after {
+            top: 0;
+            left: 9px;
+            width: 2px;
+            height: 20px;
+        }
+
+        .fab:hover {
+            transform: scale(1.08);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* Modal 遮罩層 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Modal 主體 */
+        .modal {
+            background: #FFFFFF;
+            width: 100%;
+            max-width: 480px;
+            border-radius: var(--radius-modal);
+            box-shadow: var(--modal-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 24px;
+            transform: scale(0.95);
+            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        /* Modal 標題與關閉按鈕 */
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s, color 0.2s;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: var(--text-color);
+        }
+
+        /* Modal 表單樣式 */
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            width: 100%;
+            height: 40px;
+            padding: 0 12px;
+            background-color: var(--input-bg);
+            border: 1px solid transparent;
+            border-radius: var(--radius-input);
+            font-size: 15px;
+            color: var(--text-color);
+            outline: none;
+            transition: border-color 0.2s, background-color 0.2s;
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            background-color: #FFFFFF;
+            border-color: #007AFF;
+        }
+
+        /* 時間輸入範圍組合 */
+        .time-range {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .time-range span {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Modal 底部操作按鈕 */
+        .modal-footer {
+            margin-top: 32px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-submit {
+            background-color: var(--btn-green);
+            color: #FFFFFF;
+            border: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: var(--radius-input);
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--btn-green-hover);
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+
+        @media (max-width: 640px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .fab {
+                bottom: 24px;
+                right: 24px;
+            }
+
+            .modal {
+                margin: 0 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="container">
+        <header class="header">
+            <h1>課程管理</h1>
+        </header>
+
+        <section class="grid">
+            <a href="https://www.google.com" class="card" target="_blank" rel="noopener noreferrer"></a>
+            <a href="https://www.google.com" class="card" target="_blank" rel="noopener noreferrer"></a>
+            <a href="https://www.google.com" class="card" target="_blank" rel="noopener noreferrer"></a>
+            <a href="https://www.google.com" class="card" target="_blank" rel="noopener noreferrer"></a>
+        </section>
+    </main>
+
+    <!-- 右下角浮動新增按鈕 -->
+    <button class="fab" id="openModalBtn" aria-label="新增課程">
+        <span class="fab-icon"></span>
+    </button>
+
+    <!-- Modal 彈窗介面 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h2 class="modal-title">新增課程</h2>
+                <button class="close-btn" id="closeModalBtn" aria-label="關閉">✕</button>
+            </div>
+            
+            <form id="courseForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="courseName">課程名稱</label>
+                        <input type="text" id="courseName" class="form-control" placeholder="請輸入課程名稱" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="teacher">教師</label>
+                        <input type="text" id="teacher" class="form-control" placeholder="請輸入教師姓名" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="credits">學分</label>
+                        <input type="number" id="credits" class="form-control" placeholder="請輸入數字" min="0" step="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dayOfWeek">上課星期</label>
+                        <select id="dayOfWeek" class="form-control" required>
+                            <option value="星期一">星期一</option>
+                            <option value="星期二">星期二</option>
+                            <option value="星期三" selected>星期三</option>
+                            <option value="星期四">星期四</option>
+                            <option value="星期五">星期五</option>
+                            <option value="星期六">星期六</option>
+                            <option value="星期日">星期日</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>上課時間</label>
+                        <div class="time-range">
+                            <input type="time" id="startTime" class="form-control" value="09:00" required>
+                            <span>—</span>
+                            <input type="time" id="endTime" class="form-control" value="12:00" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn-submit">建立課程</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 1. 初始化與資料結構定義
+const STORAGE_KEY = 'app_courses_data';
+
+// 取得存儲資料，若無則回傳空陣列
+function getStoredCourses() {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+// 儲存資料至 localStorage
+function saveCoursesToStorage(courses) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+}
+
+// 2. DOM 元素宣告
+const openModalBtn = document.getElementById('openModalBtn');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const modalOverlay = document.getElementById('modalOverlay');
+const courseForm = document.getElementById('courseForm');
+const gridContainer = document.querySelector('.grid');
+
+// 3. 渲染課程卡片
+function renderCourses() {
+    const courses = getStoredCourses();
+    gridContainer.innerHTML = ''; // 清空靜態卡片內容
+
+    courses.forEach(course => {
+        const card = document.createElement('a');
+        card.className = 'card';
+        card.href = course.link || 'https://www.google.com';
+        card.target = '_blank';
+        card.rel = 'noopener noreferrer';
+        card.dataset.id = course.id; // 便於未來進行編輯或刪除
+
+        gridContainer.appendChild(card);
+    });
+}
+
+// 4. Modal 顯示/隱藏 控制
+function openModal() {
+    modalOverlay.classList.add('active');
+}
+
+function closeModal() {
+    modalOverlay.classList.remove('active');
+}
+
+openModalBtn.addEventListener('click', openModal);
+closeModalBtn.addEventListener('click', closeModal);
+
+modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+        closeModal();
+    }
+});
+
+// 5. 新增課程與資料寫入
+courseForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    // 收集表單數據並建立可擴充的 Course 物件
+    const newCourse = {
+        id: 'course_' + Date.now(),
+        title: document.getElementById('courseName').value,
+        teacher: document.getElementById('teacher').value,
+        credits: Number(document.getElementById('credits').value),
+        schedule: {
+            dayOfWeek: document.getElementById('dayOfWeek').value,
+            startTime: document.getElementById('startTime').value,
+            endTime: document.getElementById('endTime').value
+        },
+        link: 'https://www.google.com', // 目前預設連結
+        
+        // 預留未來擴充欄位
+        gradingScheme: [],
+        assignments: [],
+        attendance: []
+    };
+
+    // 寫入 localStorage
+    const courses = getStoredCourses();
+    courses.push(newCourse);
+    saveCoursesToStorage(courses);
+
+    // 重新渲染並關閉視窗
+    renderCourses();
+    closeModal();
+    courseForm.reset();
+});
+
+// 6. 頁面載入完成時執行初次渲染
+document.addEventListener('DOMContentLoaded', renderCourses);
+    </script>
+
+</body>
+</html>
